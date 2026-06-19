@@ -29,6 +29,7 @@ export const App: React.FC = () => {
   const [showNote, setShowNote] = useState(false);
   const [noteContent, setNoteContent] = useState('');
   const [isGeneratingNote, setIsGeneratingNote] = useState(false);
+  const [cachedAiNote, setCachedAiNote] = useState('');
 
   // Load initial states from localStorage on mount
   useEffect(() => {
@@ -114,6 +115,7 @@ export const App: React.FC = () => {
       setHistory(null);
       setShowNote(false);
       setNoteContent('');
+      setCachedAiNote('');
       setScreen('landing');
     }
   };
@@ -126,6 +128,10 @@ export const App: React.FC = () => {
       const text = generateFutureNote(result.archetype, result.totalCo2e, result.archetype, result.recommendedShift);
       setNoteContent(text);
     } else {
+      if (cachedAiNote) {
+        setNoteContent(cachedAiNote);
+        return;
+      }
       setIsGeneratingNote(true);
       setNoteContent('');
       try {
@@ -139,7 +145,9 @@ export const App: React.FC = () => {
         const data = await res.json();
         
         if (data.candidates && data.candidates[0].content.parts[0].text) {
-          setNoteContent(`🤖 AI PERSONALIZED CORRESPONDENCE 📬\nTimestamp: May 12, 2050\nTransmission Protocol: Low-emission fiber\n\n${data.candidates[0].content.parts[0].text}\n\n[Status: Verified Bended Timeline #${Math.floor(Math.random()*89999 + 10000)}]`);
+          const finalNote = `🤖 AI PERSONALIZED CORRESPONDENCE 📬\nTimestamp: May 12, 2050\nTransmission Protocol: Low-emission fiber\n\n${data.candidates[0].content.parts[0].text}\n\n[Status: Verified Bended Timeline #${Math.floor(Math.random()*89999 + 10000)}]`;
+          setNoteContent(finalNote);
+          setCachedAiNote(finalNote);
         } else {
           throw new Error("Invalid response");
         }

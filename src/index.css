@@ -503,6 +503,8 @@ p {
   border-radius: 50px;
   font-size: 0.8rem;
   font-weight: 600;
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .footprint-indicator {
