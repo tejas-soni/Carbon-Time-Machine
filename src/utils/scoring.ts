@@ -230,7 +230,15 @@ export function calculateResults(answers: QuizAnswers): ResultData {
   const futureMood = getFutureMood(totalCo2e);
   const recommendation = ARCHETYPE_RECOMMENDATIONS[archetype];
   const shiftedCo2e = Math.max(0, totalCo2e - recommendation.co2eSaving);
-  const shiftedFutureMood = getFutureMood(shiftedCo2e);
+  let shiftedFutureMood = getFutureMood(shiftedCo2e);
+
+  if (shiftedFutureMood === futureMood) {
+    const moods: FutureMood[] = ['Restoring', 'Balanced', 'Warming', 'Stressed', 'Overheated'];
+    const idx = moods.indexOf(futureMood);
+    if (idx > 0) {
+      shiftedFutureMood = moods[idx - 1];
+    }
+  }
 
   return {
     answers,
