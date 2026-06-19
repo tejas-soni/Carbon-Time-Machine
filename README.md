@@ -2,13 +2,13 @@
 
 > **See the future your habits are quietly building.**
 
-Carbon Time Machine is an interactive, bright, and responsive web application designed for **PromptWars Challenge 3: Carbon Footprint Awareness Platform**. Rather than acting as a dry carbon calculator displaying static numbers, Carbon Time Machine turns everyday lifestyle choices into visual simulated timelines for a future city in 2035. It challenges users to explore two paths: Timeline A (continuing unchanged patterns) versus Timeline B (committing to just one high-impact habit shift).
+Carbon Time Machine is an interactive, bright, and responsive web application designed for **PromptWars Challenge 3: Carbon Footprint Awareness Platform**. Rather than acting as a dry carbon calculator displaying static numbers, Carbon Time Machine turns everyday lifestyle choices into visual simulated timelines for a future city in 2050. It challenges users to explore two paths: Timeline A (continuing unchanged patterns) versus Timeline B (committing to just one high-impact habit shift).
 
 ---
 
 ## 🚀 Live Demo & Repository
-- **Live Demo Link**: *[Deployed Link (e.g. Netlify/Vercel static deploy)]*
-- **GitHub Repository**: *[Public GitHub Repo Link]*
+- **Live Demo Link**: [https://carbontimemachine.tejassoni.in/](https://carbontimemachine.tejassoni.in/)
+- **GitHub Repository**: [https://github.com/tejas-soni/Carbon-Time-Machine](https://github.com/tejas-soni/Carbon-Time-Machine)
 
 ---
 
@@ -17,7 +17,7 @@ Carbon Time Machine is an interactive, bright, and responsive web application de
 Standard footprint apps focus heavily on numbers, metrics, and guilt: *"Your footprint is 5.4 tons CO2e/year."* 
 **Carbon Time Machine** shifts the paradigm toward **emotional awareness, visual consequence, and behavioral action**:
 - **Future Visualization**: Connects lifestyle habits to a dynamic, animated SVG city.
-- **Timeline Comparison**: A slider lets users travel from 2026 to 2035, comparing the visual and environmental state of the city under two timelines side-by-side.
+- **Timeline Comparison**: A slider lets users travel from 2026 to 2050, comparing the visual and environmental state of the city under two timelines side-by-side.
 - **One Habit Shift**: Promotes focused behavior change by recommending exactly one high-leverage habit action based on the user's carbon behavior archetype, eliminating choice fatigue.
 - **Daily Loop**: Features a 7-day local progress tracker where each daily check-in physically restores the sky clarity and adds green elements to the user's simulated future city.
 
@@ -60,11 +60,12 @@ Standard footprint apps focus heavily on numbers, metrics, and guilt: *"Your foo
 
 ---
 
-## 💡 AI Fallback & Strategy
+## 💡 AI Integration & Security Strategy
 
-To avoid API rate limits, slow load times, or key exposure in client-side code:
-- **No Required Runtime AI**: A set of highly refined narrative letters from a 2035 future-self are compiled locally based on the user's behavior archetype.
-- **Optional AI Enhancement**: Users can select "Personalize with AI" on the final screen. If serverless endpoints or environmental variables (`VITE_AI_URL`) are missing, the system utilizes a simulated AI generation delay and returns a formatted card indicating local fallback mode, guaranteeing that the application **never crashes or freezes**.
+To ensure absolute security of API keys while providing a rich personalized experience:
+- **Zero Exposed Secrets**: The Gemini 3.1 Flash Lite API is securely called via a Vercel Serverless Function (`api/generate.ts`). The `GEMINI_API_KEY` is safely stored in Vercel Environment Variables, preventing client-side leakage.
+- **Smart Caching**: Once an AI note is generated for a user's pledge, the result is cached in state. Toggling between Local and AI views does not trigger redundant API calls.
+- **Instant Fallback**: A set of highly refined narrative letters from a 2050 future-self are compiled locally based on the user's behavior archetype. If the API key is missing or the network fails, the system instantly falls back to these local templates, guaranteeing that the application **never crashes or freezes**.
 
 ---
 
