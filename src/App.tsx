@@ -46,6 +46,11 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  // Scroll to top on screen change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [screen]);
+
   // Quiz helper: navigate to next question or complete
   const handleAnswerSelect = (optionIdx: number) => {
     const q = QUESTIONS[currentQIndex];
