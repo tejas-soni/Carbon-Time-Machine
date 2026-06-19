@@ -129,16 +129,12 @@ export const App: React.FC = () => {
       setIsGeneratingNote(true);
       setNoteContent('');
       try {
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-        if (!apiKey) {
-          throw new Error("No API Key");
-        }
         const prompt = `You are the user's future self writing to them from the year 2050. Their carbon footprint archetype is "${result.archetype}" emitting ${result.totalCo2e} kg CO2e/year. They just pledged to change this habit: "${result.recommendedShift}". Write a short, emotional, personalized 3-paragraph letter from 2050 thanking them for bending the timeline and avoiding a ${result.futureMood} city future. Keep it brief and hopeful.`;
         
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        const res = await fetch(`/api/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          body: JSON.stringify({ prompt })
         });
         const data = await res.json();
         
@@ -150,7 +146,7 @@ export const App: React.FC = () => {
       } catch (err) {
         console.error("AI Generation failed:", err);
         const baseNote = generateFutureNote(result.archetype, result.totalCo2e, result.archetype, result.recommendedShift);
-        const aiEnhancedNote = `🤖 AI PERSONALIZED CORRESPONDENCE 📬\nTimestamp: May 12, 2050\n[Note: Add VITE_GEMINI_API_KEY to .env for real AI generation]\n\n${baseNote}\n\n[Status: Verified Bended Timeline #${Math.floor(Math.random()*89999 + 10000)}]`;
+        const aiEnhancedNote = `🤖 AI PERSONALIZED CORRESPONDENCE 📬\nTimestamp: May 12, 2050\n[Note: Add GEMINI_API_KEY to Vercel Environment Variables for real AI generation]\n\n${baseNote}\n\n[Status: Verified Bended Timeline #${Math.floor(Math.random()*89999 + 10000)}]`;
         setNoteContent(aiEnhancedNote);
       } finally {
         setIsGeneratingNote(false);
