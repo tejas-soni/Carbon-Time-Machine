@@ -118,8 +118,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // Generate Future Note
-  const handleLoadNote = (mode: 'local' | 'ai') => {
+  const handleLoadNote = async (mode: 'local' | 'ai') => {
     if (!result) return;
     setShowNote(true);
 
@@ -129,13 +128,33 @@ export const App: React.FC = () => {
     } else {
       setIsGeneratingNote(true);
       setNoteContent('');
-      // Simulate AI loading/writing latency or execute network call if environment configured
-      setTimeout(() => {
+      try {
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (!apiKey) {
+          throw new Error("No API Key");
+        }
+        const prompt = `You are the user's future self writing to them from the year 2050. Their carbon footprint archetype is "${result.archetype}" emitting ${result.totalCo2e} kg CO2e/year. They just pledged to change this habit: "${result.recommendedShift}". Write a short, emotional, personalized 3-paragraph letter from 2050 thanking them for bending the timeline and avoiding a ${result.futureMood} city future. Keep it brief and hopeful.`;
+        
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const data = await res.json();
+        
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+          setNoteContent(`🤖 AI PERSONALIZED CORRESPONDENCE 📬\nTimestamp: May 12, 2050\nTransmission Protocol: Low-emission fiber\n\n${data.candidates[0].content.parts[0].text}\n\n[Status: Verified Bended Timeline #${Math.floor(Math.random()*89999 + 10000)}]`);
+        } else {
+          throw new Error("Invalid response");
+        }
+      } catch (err) {
+        console.error("AI Generation failed:", err);
         const baseNote = generateFutureNote(result.archetype, result.totalCo2e, result.archetype, result.recommendedShift);
-        const aiEnhancedNote = `🤖 AI PERSONALIZED CORRESPONDENCE 📬\nTimestamp: May 12, 2035\nTransmission Protocol: Low-emission fiber\n\n${baseNote}\n\n[Status: Verified Bended Timeline #${Math.floor(Math.random()*89999 + 10000)}]`;
+        const aiEnhancedNote = `🤖 AI PERSONALIZED CORRESPONDENCE 📬\nTimestamp: May 12, 2050\n[Note: Add VITE_GEMINI_API_KEY to .env for real AI generation]\n\n${baseNote}\n\n[Status: Verified Bended Timeline #${Math.floor(Math.random()*89999 + 10000)}]`;
         setNoteContent(aiEnhancedNote);
+      } finally {
         setIsGeneratingNote(false);
-      }, 1500);
+      }
     }
   };
 
@@ -176,7 +195,6 @@ export const App: React.FC = () => {
       {screen === 'landing' && (
         <section className="landing-hero" aria-labelledby="hero-title">
           <div className="hero-content">
-            <span className="hero-tag">PromptWars Challenge 3</span>
             <h2 id="hero-title" className="hero-title">
               See the future your habits are quietly building.
             </h2>
@@ -379,7 +397,7 @@ export const App: React.FC = () => {
 
               {/* Future Self Note Module */}
               <div className="card">
-                <h3>Reflection: Note From 2035</h3>
+                <h3>Reflection: Note From 2050</h3>
                 <p style={{ marginBottom: '16px' }}>
                   Read a message sent back in time from your future self.
                 </p>
@@ -470,12 +488,12 @@ export const App: React.FC = () => {
             <div style={{ marginTop: '24px', textAlign: 'left' }}>
               <h3 style={{ marginBottom: '8px' }}>Your Shifted Future City</h3>
               <p style={{ marginBottom: '16px' }}>
-                Visual simulation of your future in 2035 with {history.checkInDates.length} check-in day(s) recorded:
+                Visual simulation of your future in 2050 with {history.checkInDates.length} check-in day(s) recorded:
               </p>
               <SVGWorld
                 mood={result.futureMood}
                 timeline="B"
-                year={2035}
+                year={2050}
                 checkInCount={history.checkInDates.length}
               />
             </div>

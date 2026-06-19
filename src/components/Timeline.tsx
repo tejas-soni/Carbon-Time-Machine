@@ -9,7 +9,7 @@ interface TimelineProps {
 }
 
 export const Timeline: React.FC<TimelineProps> = ({ result, checkInCount }) => {
-  const [selectedYear, setSelectedYear] = useState<number>(2035);
+  const [selectedYear, setSelectedYear] = useState<number>(2050);
   const [mobileTab, setMobileTab] = useState<'A' | 'B'>('A');
 
   const { archetype, totalCo2e, futureMood, recommendedShift, shiftedCo2e, shiftedFutureMood } = result;
@@ -79,7 +79,7 @@ export const Timeline: React.FC<TimelineProps> = ({ result, checkInCount }) => {
         <input
           type="range"
           min="2026"
-          max="2035"
+          max="2050"
           step="1"
           value={selectedYear}
           onChange={handleYearChange}
@@ -89,7 +89,7 @@ export const Timeline: React.FC<TimelineProps> = ({ result, checkInCount }) => {
         <div className="year-labels">
           <span>Today (2026)</span>
           <span>2030</span>
-          <span>Future (2035)</span>
+          <span>Future (2050)</span>
         </div>
       </div>
 

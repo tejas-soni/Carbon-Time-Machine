@@ -9,7 +9,7 @@ The week you started replacing short rides with walking, cycling, or public tran
 
 Thank you for choosing to move differently.
 
-— You, from 2035`,
+— You, from 2050`,
 
   'Delivery Loop': `Dear Present Me,
 
@@ -19,7 +19,7 @@ When you chose to cook at home and swap one delivery order for a low-packaging, 
 
 That single home-cooked meal was the point where the timeline started to bend.
 
-— You, from 2035`,
+— You, from 2050`,
 
   'Cooling Dependent Urbanite': `Dear Present Me,
 
@@ -27,7 +27,7 @@ I know how suffocating the heat can feel and how easy it is to set the AC to fre
 
 By raising your thermostat by 1°C and using natural cooling, you eased the burden on our grid. You showed that we can adapt without over-consuming. The air is slightly cooler and the grid more stable in my time because you adjusted yours.
 
-— You, from 2035`,
+— You, from 2050`,
 
   'High-Street Shopper': `Dear Present Me,
 
@@ -37,7 +37,7 @@ The day you decided to delay an impulse purchase by 7 days, you took control. Th
 
 We have less clutter and a healthier planet because you paused.
 
-— You, from 2035`,
+— You, from 2050`,
 
   'Packaging Accumulator': `Dear Present Me,
 
@@ -47,7 +47,7 @@ By switching to reusable bags, keeping a bottle on hand, and organizing your rec
 
 That shift started a habit that keeps my future city clean and beautiful.
 
-— You, from 2035`,
+— You, from 2050`,
 
   'Quiet Saver': `Dear Present Me,
 
@@ -57,7 +57,7 @@ The moment you shared your carbon journey and pledge with a friend, you amplifie
 
 Thank you for leading by example.
 
-— You, from 2035`
+— You, from 2050`
 };
 
 export function generateFutureNote(

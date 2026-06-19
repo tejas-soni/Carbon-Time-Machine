@@ -4,7 +4,7 @@ import { FutureMood } from '../types';
 interface SVGWorldProps {
   mood: FutureMood;
   timeline: 'A' | 'B'; // A = Continue Unchanged, B = Shifted Habit
-  year: number;       // 2026, 2030, 2035
+  year: number;       // 2026, 2030, 2050
   checkInCount: number; // Daily check-ins (adds extra green sparkles/flourish)
 }
 
@@ -15,11 +15,11 @@ export const SVGWorld: React.FC<SVGWorldProps> = ({
   checkInCount
 }) => {
   // Map years to progress parameter t (0.0 to 1.0)
-  const t = (year - 2026) / 9; // 2026 = 0, 2035 = 1
+  const t = (year - 2026) / 24; // 2026 = 0, 2050 = 1
 
   // Determine the effective mood based on timeline progress
   // Today (t=0) is always relatively balanced.
-  // By 2035 (t=1), it reaches the full severity of Timeline A or the improvement of Timeline B.
+  // By 2050 (t=1), it reaches the full severity of Timeline A or the improvement of Timeline B.
   const getEffectiveState = () => {
     let opacityGlow = 0;       // heat glow overlay opacity
     let skyStart = '#E0F2FE';  // sky blue

@@ -83,7 +83,7 @@ Try yours: ${appLink}
         <div className="share-card-header">
           <span className="share-card-tag">⏳ Carbon Time Machine Card</span>
           <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-            2035 Timeline
+            2050 Timeline
           </span>
         </div>
 
@@ -145,6 +145,12 @@ Try yours: ${appLink}
             Copy Text
           </button>
         )}
+      </div>
+
+      <div style={{ marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+        <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '6px 12px', fontSize: '0.85rem', flex: 1, textAlign: 'center', textDecoration: 'none' }}>𝕏 Post</a>
+        <a href={`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(appLink)}&title=${encodeURIComponent('Carbon Time Machine')}&summary=${encodeURIComponent(shareText)}`} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '6px 12px', fontSize: '0.85rem', flex: 1, textAlign: 'center', textDecoration: 'none' }}>LinkedIn</a>
+        <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appLink)}`} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '6px 12px', fontSize: '0.85rem', flex: 1, textAlign: 'center', textDecoration: 'none' }}>Facebook</a>
       </div>
 
       {showToast && (
