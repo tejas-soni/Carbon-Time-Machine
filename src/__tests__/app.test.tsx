@@ -95,4 +95,32 @@ describe('App flow', () => {
 
     expect(await screen.findByText(/GEMINI_API_KEY/i)).toBeInTheDocument();
   });
+
+  test('keeps the current screen when reset is cancelled', async () => {
+    saveResultData(calculateResults({}));
+    vi.mocked(window.confirm).mockReturnValue(false);
+
+    render(<App />);
+    expect(await screen.findByText('Quiet Saver')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /reset all quiz data and restart/i }));
+    expect(screen.getByText('Quiet Saver')).toBeInTheDocument();
+  });
+
+  test('falls back to the local note when AI returns an invalid payload', async () => {
+    saveResultData(calculateResults({}));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ candidates: [] }),
+      }),
+    );
+
+    render(<App />);
+    expect(await screen.findByText('Quiet Saver')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /personalize with ai/i }));
+    expect(await screen.findByText(/GEMINI_API_KEY/i)).toBeInTheDocument();
+  });
 });

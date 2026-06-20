@@ -156,13 +156,5 @@ export function getWorldState({
     state.recyclingBin = true;
     return state;
   }
-
-  state.skyStart = '#FFEDD5';
-  state.skyEnd = '#CBD5E1';
-  state.opacityGlow = 0.25 * (1 - t);
-  state.treeCount = 1;
-  state.electricBus = true;
-  state.solarPanels = true;
-  state.recyclingBin = true;
   return state;
 }

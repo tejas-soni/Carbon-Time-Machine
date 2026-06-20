@@ -5,7 +5,7 @@
  */
 import { useState, ChangeEvent, FC } from 'react';
 import { ResultData } from '../types';
-import { getFutureMood } from '../utils/scoring';
+
 import SVGWorld from './SVGWorld';
 import { getTimelineDescription } from './timelineLogic';
 
@@ -22,7 +22,7 @@ export const Timeline: FC<TimelineProps> = ({ result, checkInCount }) => {
   const [selectedYear, setSelectedYear] = useState<number>(TARGET_YEAR);
   const [mobileTab, setMobileTab] = useState<'A' | 'B'>('A');
 
-  const { totalCo2e, futureMood, recommendedShift, shiftedFutureMood } = result;
+  const { futureMood, recommendedShift, shiftedFutureMood } = result;
 
   /** Updates the currently selected year when the slider moves. */
   const handleYearChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -88,7 +88,7 @@ export const Timeline: FC<TimelineProps> = ({ result, checkInCount }) => {
           <div className="path-header">
             <span className="path-tag bad">Timeline A: Continue Pattern</span>
             <span className="timeline-mood-label timeline-mood-label--bad">
-              {selectedYear === BASE_YEAR ? futureMood : getFutureMood(totalCo2e)} Future
+              {futureMood} Future
             </span>
           </div>
 
