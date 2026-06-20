@@ -1,13 +1,15 @@
 {
   "name": "carbon-time-machine",
+  "description": "Interactive carbon footprint awareness platform that visualizes how daily habits shape the future city of 2050.",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
     "react": "^18.3.1",

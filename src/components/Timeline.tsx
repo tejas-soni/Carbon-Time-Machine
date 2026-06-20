@@ -1,29 +1,41 @@
-import React, { useState } from 'react';
+/**
+ * @fileoverview Interactive Timeline Component.
+ * Allows users to scrub forward in time (2026-2050) to see
+ * the diverging futures between their Unchanged path (A) and Shifted path (B).
+ */
+import { useState, ChangeEvent, FC } from 'react';
 import { ResultData } from '../types';
 import { getFutureMood } from '../utils/scoring';
 import SVGWorld from './SVGWorld';
+
+const BASE_YEAR = 2026;
+const TARGET_YEAR = 2050;
+const MID_YEAR_START = 2029;
+const MID_YEAR_END = 2033;
+
 
 interface TimelineProps {
   result: ResultData;
   checkInCount: number;
 }
 
-export const Timeline: React.FC<TimelineProps> = ({ result, checkInCount }) => {
-  const [selectedYear, setSelectedYear] = useState<number>(2050);
+export const Timeline: FC<TimelineProps> = ({ result, checkInCount }) => {
+  const [selectedYear, setSelectedYear] = useState<number>(TARGET_YEAR);
   const [mobileTab, setMobileTab] = useState<'A' | 'B'>('A');
 
   const { archetype, totalCo2e, futureMood, recommendedShift, shiftedCo2e, shiftedFutureMood } = result;
 
-  const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  /** Updates the currently selected year when the slider moves. */
+  const handleYearChange = (e: ChangeEvent<HTMLInputElement>) => {
     setSelectedYear(parseInt(e.target.value, 10));
   };
 
-  // Interpolate future descriptions based on current year and mood
+  /** Generates contextual narrative based on the selected year and timeline path. */
   const getTimelineDescription = (timeline: 'A' | 'B', year: number) => {
-    const isMidFuture = year >= 2029 && year < 2033;
+    const isMidFuture = year >= MID_YEAR_START && year < MID_YEAR_END;
 
     if (timeline === 'A') {
-      if (year === 2026) {
+      if (year === BASE_YEAR) {
         return `Present Day. Your lifestyle habits are generating a footprint of ${totalCo2e.toLocaleString()} kg CO2e/year. The baseline city experiences moderate traffic, average cooling loads, and typical landfill stress.`;
       }
       
@@ -42,7 +54,7 @@ export const Timeline: React.FC<TimelineProps> = ({ result, checkInCount }) => {
       return `Year ${year}. A decade of unchanged habits. The city is locked into a ${futureMood.toLowerCase()} state, defined by ${impactDesc}. Total emissions continue at ${totalCo2e.toLocaleString()} kg/year.`;
     } else {
       // Timeline B (Shifted)
-      if (year === 2026) {
+      if (year === BASE_YEAR) {
         return `Pledge Day. You start making your one habit shift: "${recommendedShift}". Your baseline carbon footprint drops instantly by ${Math.round(totalCo2e - shiftedCo2e)} kg CO2e/year. The timeline starts bending.`;
       }
       
@@ -61,25 +73,25 @@ export const Timeline: React.FC<TimelineProps> = ({ result, checkInCount }) => {
 
   return (
     <div className="card timeline-slider-card">
-      <h2 style={{ marginBottom: '8px' }}>Habit Time Machine</h2>
-      <p style={{ marginBottom: '20px' }}>
+      <h2 className="timeline-heading">Habit Time Machine</h2>
+      <p className="timeline-desc">
         Slide the timeline to see how today's choices shape two alternative paths for the next 10 years.
       </p>
 
       {/* Slider Container */}
       <div className="slider-container">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary-hover)' }}>
+        <div className="timeline-destination-row">
+          <span className="timeline-destination-label">
             Destination Year:
           </span>
-          <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-main)' }}>
+          <span className="timeline-destination-year">
             {selectedYear}
           </span>
         </div>
         <input
           type="range"
-          min="2026"
-          max="2050"
+          min={BASE_YEAR}
+          max={TARGET_YEAR}
           step="1"
           value={selectedYear}
           onChange={handleYearChange}
@@ -87,33 +99,23 @@ export const Timeline: React.FC<TimelineProps> = ({ result, checkInCount }) => {
           aria-label="Select year for city simulation"
         />
         <div className="year-labels">
-          <span>Today (2026)</span>
+          <span>Today ({BASE_YEAR})</span>
           <span>2030</span>
-          <span>Future (2050)</span>
+          <span>Future ({TARGET_YEAR})</span>
         </div>
       </div>
 
       {/* Mobile-only switcher tabs */}
-      <div
-        className="mobile-only-flex"
-        style={{
-          display: 'none',
-          gap: '8px',
-          margin: '16px 0',
-          justifyContent: 'center'
-        }}
-      >
+      <div className="mobile-tab-row">
         <button
           onClick={() => setMobileTab('A')}
-          className={`btn ${mobileTab === 'A' ? 'btn-danger' : 'btn-outline'}`}
-          style={{ flex: 1, minHeight: '40px', padding: '8px' }}
+          className={`btn mobile-tab-btn ${mobileTab === 'A' ? 'btn-danger' : 'btn-outline'}`}
         >
           Timeline A (Unchanged)
         </button>
         <button
           onClick={() => setMobileTab('B')}
-          className={`btn ${mobileTab === 'B' ? 'btn-primary' : 'btn-outline'}`}
-          style={{ flex: 1, minHeight: '40px', padding: '8px' }}
+          className={`btn mobile-tab-btn ${mobileTab === 'B' ? 'btn-primary' : 'btn-outline'}`}
         >
           Timeline B (One Shift)
         </button>
@@ -124,15 +126,11 @@ export const Timeline: React.FC<TimelineProps> = ({ result, checkInCount }) => {
         {/* Timeline A: Continue Unchanged */}
         <div
           className={`timeline-path bad-path ${mobileTab === 'A' ? 'active-mobile-path' : ''}`}
-          style={{
-            display:
-              window.innerWidth <= 768 && mobileTab !== 'A' ? 'none' : 'block'
-          }}
         >
           <div className="path-header">
             <span className="path-tag bad">Timeline A: Continue Pattern</span>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent)' }}>
-              {selectedYear === 2026 ? futureMood : getFutureMood(totalCo2e)} Future
+            <span className="timeline-mood-label timeline-mood-label--bad">
+              {selectedYear === BASE_YEAR ? futureMood : getFutureMood(totalCo2e)} Future
             </span>
           </div>
 
@@ -143,8 +141,8 @@ export const Timeline: React.FC<TimelineProps> = ({ result, checkInCount }) => {
             checkInCount={0}
           />
 
-          <div style={{ marginTop: '16px' }}>
-            <p style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>
+          <div className="timeline-description-container">
+            <p className="timeline-description">
               {getTimelineDescription('A', selectedYear)}
             </p>
           </div>
@@ -153,15 +151,11 @@ export const Timeline: React.FC<TimelineProps> = ({ result, checkInCount }) => {
         {/* Timeline B: Shift One Habit */}
         <div
           className={`timeline-path active-path ${mobileTab === 'B' ? 'active-mobile-path' : ''}`}
-          style={{
-            display:
-              window.innerWidth <= 768 && mobileTab !== 'B' ? 'none' : 'block'
-          }}
         >
           <div className="path-header">
             <span className="path-tag good">Timeline B: Shift One Habit</span>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)' }}>
-              {selectedYear === 2026 ? 'Bending...' : shiftedFutureMood} Future
+            <span className="timeline-mood-label timeline-mood-label--good">
+              {selectedYear === BASE_YEAR ? 'Bending...' : shiftedFutureMood} Future
             </span>
           </div>
 
@@ -172,41 +166,18 @@ export const Timeline: React.FC<TimelineProps> = ({ result, checkInCount }) => {
             checkInCount={checkInCount}
           />
 
-          <div style={{ marginTop: '16px' }}>
-            <div
-              style={{
-                background: '#ECFDF5',
-                border: '1px solid rgba(16, 185, 129, 0.2)',
-                borderRadius: '8px',
-                padding: '8px 12px',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: 'var(--primary-hover)',
-                marginBottom: '10px'
-              }}
-            >
+          <div className="timeline-description-container">
+            <div className="timeline-action-banner">
               Action: {recommendedShift}
             </div>
-            <p style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>
+            <p className="timeline-description">
               {getTimelineDescription('B', selectedYear)}
             </p>
           </div>
         </div>
       </div>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .mobile-only-flex {
-            display: flex !important;
-          }
-          .timeline-path {
-            display: none;
-          }
-          .timeline-path.active-mobile-path {
-            display: block !important;
-          }
-        }
-      `}</style>
+
     </div>
   );
 };

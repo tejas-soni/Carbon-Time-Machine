@@ -1,5 +1,12 @@
+/**
+ * @fileoverview Future self narrative templates.
+ * Contains pre-written emotional letters from the user's 2050 future self,
+ * customized by behavioral archetype for local (non-AI) generation.
+ */
+
 import { Archetype } from '../types';
 
+/** Pre-written narrative letters from the user's future self, keyed by behavioral archetype. */
 export const LOCAL_NOTES: Record<Archetype, string> = {
   'Convenience Commuter': `Dear Present Me,
 
@@ -60,12 +67,12 @@ Thank you for leading by example.
 — You, from 2050`
 };
 
-export function generateFutureNote(
-  archetype: Archetype,
-  _totalCo2e: number,
-  _topCategory: string,
-  _recommendedShift: string
-): string {
-  // Return the customized template
+/**
+ * Generates a future self narrative letter based on the user's behavioral archetype.
+ * Used as the local (non-AI) fallback for the "Note From 2050" feature.
+ * @param archetype - The user's identified behavioral archetype.
+ * @returns A personalized letter from the user's future self.
+ */
+export function generateFutureNote(archetype: Archetype): string {
   return LOCAL_NOTES[archetype] || LOCAL_NOTES['Quiet Saver'];
 }

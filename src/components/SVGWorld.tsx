@@ -1,4 +1,9 @@
-import React from 'react';
+/**
+ * @fileoverview Procedural SVG City Simulation.
+ * Renders a visual representation of the future city based on the user's
+ * carbon emissions, behavioral archetype, and timeline shift.
+ */
+import { FC } from 'react';
 import { FutureMood } from '../types';
 
 interface SVGWorldProps {
@@ -8,7 +13,12 @@ interface SVGWorldProps {
   checkInCount: number; // Daily check-ins (adds extra green sparkles/flourish)
 }
 
-export const SVGWorld: React.FC<SVGWorldProps> = ({
+/**
+ * Procedural SVG City Simulation.
+ * Renders a visual representation of the future city based on the user's
+ * carbon emissions, behavioral archetype, and timeline shift.
+ */
+export const SVGWorld: FC<SVGWorldProps> = ({
   mood,
   timeline,
   year,
@@ -171,13 +181,12 @@ export const SVGWorld: React.FC<SVGWorldProps> = ({
 
   return (
     <div className="svg-world-wrapper">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+      <div className="svg-world-header">
+        <span className="svg-world-meta">
           Simulation World: {year}
         </span>
         <span
-          className={`path-tag ${timeline === 'B' ? 'good' : 'bad'}`}
-          style={{ textTransform: 'uppercase' }}
+          className={`path-tag path-tag-uppercase ${timeline === 'B' ? 'good' : 'bad'}`}
         >
           {timeline === 'B' ? 'Timeline B (Shifted Habit)' : 'Timeline A (Unchanged)'}
         </span>
@@ -209,7 +218,7 @@ export const SVGWorld: React.FC<SVGWorldProps> = ({
             height="240"
             fill="url(#heatGlowGrad)"
             opacity={state.opacityGlow}
-            style={{ transition: 'opacity 0.5s ease' }}
+            className="svg-heat-glow"
           />
         )}
 
@@ -500,7 +509,7 @@ export const SVGWorld: React.FC<SVGWorldProps> = ({
       </svg>
 
       {/* Screen Reader Details (Accessibility) */}
-      <div className="sr-only" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
+      <div className="sr-only">
         City future visual for year {year}. Sky is {state.opacityGlow > 0.4 ? 'hazy with heavy heat index' : 'clear and clean'}.
         There are {state.treeCount} trees visible. Traffic density is {state.trafficDensity}. 
         {state.windTurbine ? 'Wind energy and solar panels are active.' : ''}

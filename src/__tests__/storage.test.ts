@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Unit tests for localStorage persistence.
+ * Validates JSON serialization, corrupt data handling, and pledge check-in logic.
+ */
 import { describe, test, expect, beforeEach } from 'vitest';
 import {
   saveResultData,
@@ -68,17 +72,50 @@ describe('Storage Helpers Tests', () => {
 
     const loaded = loadCheckInHistory();
     expect(loaded).toEqual(history);
+  });
 
-    const todayStr = getTodayDateString();
-    const updatedHistory = addCheckInToday();
+  test('adds check-in today and prevents duplicates', () => {
+    const pledge: Pledge = {
+      archetype: 'Convenience Commuter',
+      shiftText: 'Replace short cab rides',
+      co2eSaving: 400,
+      pledgedAt: new Date().toISOString()
+    };
+    createPledge(pledge);
     
-    expect(updatedHistory).not.toBeNull();
-    expect(updatedHistory?.checkInDates).toContain(todayStr);
-    expect(updatedHistory?.checkInDates).toHaveLength(1);
+    let history = addCheckInToday();
+    
+    expect(history).not.toBeNull();
+    expect(history?.checkInDates.length).toBe(1);
+    
+    // Try again today
+    history = addCheckInToday();
+    expect(history?.checkInDates.length).toBe(1); // Still 1
+  });
 
-    // Repeated check-in on the same day shouldn't duplicate
-    const checkinAgain = addCheckInToday();
-    expect(checkinAgain?.checkInDates).toHaveLength(1);
+  test('handles multiple check-ins on different simulated days', () => {
+    const pledge: Pledge = {
+      archetype: 'Convenience Commuter',
+      shiftText: 'Replace short cab rides',
+      co2eSaving: 400,
+      pledgedAt: new Date().toISOString()
+    };
+    createPledge(pledge);
+    
+    // Simulate day 1 check-in
+    const history1 = addCheckInToday()!;
+    expect(history1.checkInDates.length).toBe(1);
+    
+    // Manually manipulate storage to simulate a previous day
+    const oldDate = '2020-01-01';
+    history1.checkInDates = [oldDate];
+    localStorage.setItem('ctm_checkin_history', JSON.stringify(history1));
+    
+    // Simulate check-in "today"
+    const history2 = addCheckInToday()!;
+    expect(history2.checkInDates.length).toBe(2);
+    expect(history2.checkInDates).toContain(oldDate);
+    expect(history2.checkInDates).toContain(getTodayDateString());
   });
 
   test('clearAllData removes results and check-in history', () => {
@@ -109,5 +146,27 @@ describe('Storage Helpers Tests', () => {
 
     expect(loadResultData()).toBeNull();
     expect(loadCheckInHistory()).toBeNull();
+  });
+
+  test('getTodayDateString returns YYYY-MM-DD format', () => {
+    const today = getTodayDateString();
+    expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  test('loadResultData returns null for corrupted JSON', () => {
+    localStorage.setItem('ctm_result_data', 'not-valid-json{{{');
+    const result = loadResultData();
+    expect(result).toBeNull();
+  });
+
+  test('loadCheckInHistory returns null for corrupted JSON', () => {
+    localStorage.setItem('ctm_checkin_history', '<<<invalid>>>');
+    const result = loadCheckInHistory();
+    expect(result).toBeNull();
+  });
+
+  test('addCheckInToday returns null when no pledge exists', () => {
+    const result = addCheckInToday();
+    expect(result).toBeNull();
   });
 });

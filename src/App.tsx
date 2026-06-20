@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { QUESTIONS, calculateResults } from './utils/scoring';
+/**
+ * @fileoverview Main application controller and routing component.
+ * Manages the state and transitions between the landing, quiz, results, and pledge screens.
+ */
+import { useState, useEffect } from 'react';
+import { QUESTIONS, calculateResults, ARCHETYPE_RECOMMENDATIONS } from './utils/scoring';
 import {
   loadResultData,
   saveResultData,
@@ -9,15 +13,43 @@ import {
   clearAllData,
   getTodayDateString
 } from './utils/storage';
+import { log } from './utils/logger';
 import { generateFutureNote } from './utils/templates';
-import { QuizAnswers, ResultData, CheckInHistory } from './types';
+import { QuizAnswers, ResultData, CheckInHistory, Archetype, QuestionCategory } from './types';
 import Timeline from './components/Timeline';
 import ShareCard from './components/ShareCard';
 import Stepper from './components/Stepper';
 import SVGWorld from './components/SVGWorld';
 
+/** Screen state type for routing within the app. */
 type ScreenState = 'landing' | 'quiz' | 'results' | 'pledge';
 
+/** Maps archetypes to their corresponding emoji icon. */
+const ARCHETYPE_ICONS: Record<Archetype, string> = {
+  'Convenience Commuter': '🚗',
+  'Delivery Loop': '🍕',
+  'Cooling Dependent Urbanite': '❄️',
+  'High-Street Shopper': '🛍️',
+  'Packaging Accumulator': '📦',
+  'Quiet Saver': '🌱'
+};
+
+/** Maximum possible points per quiz category for percentage calculations. */
+const CATEGORY_MAX_SCORES: Record<QuestionCategory, number> = {
+  transport: 12, food: 8, energy: 10, shopping: 8, waste: 7,
+};
+
+/** Minimum visible width percentage for category bars. */
+const MIN_BAR_PERCENT = 8;
+
+/** Generates a random timeline verification ID. */
+const generateTimelineId = (): number => Math.floor(Math.random() * 89999 + 10000);
+
+/**
+ * Main Application Component.
+ * Acts as the primary controller for routing between screens (landing, quiz, results, pledge).
+ * Manages all top-level state and API interactions.
+ */
 export const App: React.FC = () => {
   const [screen, setScreen] = useState<ScreenState>('landing');
   const [answers, setAnswers] = useState<QuizAnswers>({});
@@ -46,12 +78,16 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Scroll to top on screen change
+  // Scroll to top on screen change, with a slight delay to allow DOM painting
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    const timer = setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
+    return () => clearTimeout(timer);
   }, [screen]);
 
-  // Quiz helper: navigate to next question or complete
+  /** Records the user's selected answer for a specific question. */
   const handleAnswerSelect = (optionIdx: number) => {
     const q = QUESTIONS[currentQIndex];
     setAnswers((prev) => ({
@@ -60,6 +96,7 @@ export const App: React.FC = () => {
     }));
   };
 
+  /** Advances to the next question, or calculates and shows results if at the end. */
   const handleNext = () => {
     if (currentQIndex < QUESTIONS.length - 1) {
       setCurrentQIndex((prev) => prev + 1);
@@ -72,23 +109,18 @@ export const App: React.FC = () => {
     }
   };
 
+  /** Returns to the previous question. */
   const handleBack = () => {
     if (currentQIndex > 0) {
       setCurrentQIndex((prev) => prev - 1);
     }
   };
 
-  // Pledge commit helper
+  /** Commits the user to their recommended habit shift and initializes their daily tracker. */
   const handleCommitPledge = () => {
     if (!result) return;
     
-    // Determine saving based on archetype
-    let saving = 150;
-    if (result.archetype === 'Convenience Commuter') saving = 400;
-    else if (result.archetype === 'Delivery Loop') saving = 300;
-    else if (result.archetype === 'Cooling Dependent Urbanite') saving = 250;
-    else if (result.archetype === 'High-Street Shopper') saving = 350;
-    else if (result.archetype === 'Packaging Accumulator') saving = 200;
+    const saving = ARCHETYPE_RECOMMENDATIONS[result.archetype]?.co2eSaving || 150;
 
     const newPledge = {
       archetype: result.archetype,
@@ -102,7 +134,7 @@ export const App: React.FC = () => {
     setScreen('pledge');
   };
 
-  // Check-In helper
+  /** Records a daily check-in for the active pledge. */
   const handleCheckIn = () => {
     const updated = addCheckInToday();
     if (updated) {
@@ -110,7 +142,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // Reset/Restart helper
+  /** Clears all local data and resets the app state back to the landing screen. */
   const handleReset = () => {
     if (window.confirm('Are you sure you want to reset your Time Machine history? This clears all saved results and pledges.')) {
       clearAllData();
@@ -125,12 +157,16 @@ export const App: React.FC = () => {
     }
   };
 
+  /** 
+   * Loads the future self note, either generating via AI or using a local template.
+   * @param mode - Whether to load the 'local' template or 'ai' generated note.
+   */
   const handleLoadNote = async (mode: 'local' | 'ai') => {
     if (!result) return;
     setShowNote(true);
 
     if (mode === 'local') {
-      const text = generateFutureNote(result.archetype, result.totalCo2e, result.archetype, result.recommendedShift);
+      const text = generateFutureNote(result.archetype);
       setNoteContent(text);
     } else {
       if (cachedAiNote) {
@@ -150,16 +186,16 @@ export const App: React.FC = () => {
         const data = await res.json();
         
         if (data.candidates && data.candidates[0].content.parts[0].text) {
-          const finalNote = `🤖 AI PERSONALIZED CORRESPONDENCE 📬\nTimestamp: May 12, 2050\nTransmission Protocol: Low-emission fiber\n\n${data.candidates[0].content.parts[0].text}\n\n[Status: Verified Bended Timeline #${Math.floor(Math.random()*89999 + 10000)}]`;
+          const finalNote = `🤖 AI PERSONALIZED CORRESPONDENCE 📬\nTimestamp: May 12, 2050\nTransmission Protocol: Low-emission fiber\n\n${data.candidates[0].content.parts[0].text}\n\n[Status: Verified Bended Timeline #${generateTimelineId()}]`;
           setNoteContent(finalNote);
           setCachedAiNote(finalNote);
         } else {
           throw new Error("Invalid response");
         }
       } catch (err) {
-        console.error("AI Generation failed:", err);
-        const baseNote = generateFutureNote(result.archetype, result.totalCo2e, result.archetype, result.recommendedShift);
-        const aiEnhancedNote = `🤖 AI PERSONALIZED CORRESPONDENCE 📬\nTimestamp: May 12, 2050\n[Note: Add GEMINI_API_KEY to Vercel Environment Variables for real AI generation]\n\n${baseNote}\n\n[Status: Verified Bended Timeline #${Math.floor(Math.random()*89999 + 10000)}]`;
+        log('error', "AI Generation failed:", err);
+        const baseNote = generateFutureNote(result.archetype);
+        const aiEnhancedNote = `🤖 AI PERSONALIZED CORRESPONDENCE 📬\nTimestamp: May 12, 2050\n[Note: Add GEMINI_API_KEY to Vercel Environment Variables for real AI generation]\n\n${baseNote}\n\n[Status: Verified Bended Timeline #${generateTimelineId()}]`;
         setNoteContent(aiEnhancedNote);
       } finally {
         setIsGeneratingNote(false);
@@ -170,16 +206,10 @@ export const App: React.FC = () => {
   const currentQuestion = QUESTIONS[currentQIndex];
   const isQuestionAnswered = answers[currentQuestion?.id] !== undefined;
 
-  // Render helpers
+  /** Maps impact categories to their respective emoji icons. */
   const renderCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'transport': return '🚲';
-      case 'food': return '🥗';
-      case 'energy': return '⚡';
-      case 'shopping': return '🛍️';
-      case 'waste': return '♻️';
-      default: return '📍';
-    }
+    const icons: Record<QuestionCategory | string, string> = { transport: '🚲', food: '🥗', energy: '⚡', shopping: '🛍️', waste: '♻️' };
+    return icons[category] || '📍';
   };
 
   return (
@@ -194,11 +224,13 @@ export const App: React.FC = () => {
           </div>
         </div>
         {screen !== 'landing' && screen !== 'quiz' && (
-          <button className="btn btn-outline" style={{ minHeight: '38px', padding: '6px 12px', fontSize: '0.85rem' }} onClick={handleReset}>
+          <button className="btn btn-outline btn-header-reset" onClick={handleReset} aria-label="Reset all quiz data and restart">
             Reset Machine
           </button>
         )}
       </header>
+      
+      <main id="main-content">
 
       {/* Landing Page */}
       {screen === 'landing' && (
@@ -210,7 +242,7 @@ export const App: React.FC = () => {
             <p className="hero-desc">
               This is not just a carbon calculator. It is an interactive time portal connecting your daily, repeating habits to the future state of our shared city. Swap a single habit today, and watch the timeline bend.
             </p>
-            <div style={{ marginTop: '10px' }}>
+            <div className="margin-top-10">
               <button
                 className="btn btn-primary"
                 onClick={() => setScreen('quiz')}
@@ -225,9 +257,9 @@ export const App: React.FC = () => {
             <div className="portal-container">
               <div className="portal-graphic" />
               <div className="portal-face">
-                <span style={{ fontSize: '3rem', marginBottom: '10px' }}>🌇</span>
-                <h3 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>Dual Futures Portal</h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                <span className="portal-emoji">🌇</span>
+                <h3 className="portal-heading">Dual Futures Portal</h3>
+                <p className="portal-desc">
                   Interactive visualization adjusts based on 12 lifestyle habits.
                 </p>
               </div>
@@ -247,7 +279,7 @@ export const App: React.FC = () => {
               <span className={`quiz-category-badge badge-${currentQuestion.category}`}>
                 {renderCategoryIcon(currentQuestion.category)} {currentQuestion.category}
               </span>
-              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+              <span className="quiz-meta">
                 Q {currentQIndex + 1} of {QUESTIONS.length}
               </span>
             </div>
@@ -274,10 +306,9 @@ export const App: React.FC = () => {
 
             <div className="quiz-footer">
               <button
-                className="btn btn-outline"
+                className={`btn btn-outline ${currentQIndex === 0 ? 'visibility-hidden' : ''}`}
                 onClick={handleBack}
                 disabled={currentQIndex === 0}
-                style={{ visibility: currentQIndex === 0 ? 'hidden' : 'visible' }}
               >
                 ← Back
               </button>
@@ -299,24 +330,20 @@ export const App: React.FC = () => {
           <h2 id="results-section-title" className="sr-only">Carbon Footprint Results</h2>
           <div className="results-container">
             {/* Analysis & Details Column */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div className="flex-col-gap-24">
               <div className="card dashboard-card">
                 <div className="archetype-banner">
                   <div>
                     <span className="archetype-badge">YOUR BEHAVIOR PATTERN</span>
                     <h3 className="archetype-title">{result.archetype}</h3>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                    <p className="archetype-description">
                       {result.archetype === 'Quiet Saver' 
                         ? 'Your habits are already very light. You lead by quiet example.' 
                         : `Your footprint is primarily driven by your repeating ${result.archetype.replace('The ', '')} habits.`}
                     </p>
                   </div>
-                  <span style={{ fontSize: '3rem' }}>
-                    {result.archetype === 'Convenience Commuter' ? '🚗' :
-                     result.archetype === 'Delivery Loop' ? '🍕' :
-                     result.archetype === 'Cooling Dependent Urbanite' ? '❄️' :
-                     result.archetype === 'High-Street Shopper' ? '🛍️' :
-                     result.archetype === 'Packaging Accumulator' ? '📦' : '🌱'}
+                  <span className="archetype-icon" aria-hidden="true">
+                    {ARCHETYPE_ICONS[result.archetype] || '🌱'}
                   </span>
                 </div>
 
@@ -328,40 +355,35 @@ export const App: React.FC = () => {
                     <span className="footprint-unit">Tons/Yr</span>
                   </div>
                   <div>
-                    <h4 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>
+                    <h4 className="footprint-title">
                       Estimated Footprint: {(result.totalCo2e / 1000).toFixed(2)} Tons CO₂e / Year
                     </h4>
-                    <p style={{ fontSize: '0.9rem' }}>
+                    <p className="footprint-desc">
                       If this pattern continues, your timeline bends toward a <strong>{result.futureMood.toLowerCase()}</strong> future.
                     </p>
                   </div>
                 </div>
 
                 {/* Categories Bar Chart */}
-                <h4 style={{ marginBottom: '12px', fontSize: '1rem' }}>Impact Contribution Breakdown</h4>
+                <h4 className="breakdown-heading">Impact Contribution Breakdown</h4>
                 <div className="analysis-category-grid">
                   {(['transport', 'food', 'energy', 'shopping', 'waste'] as const).map((cat) => {
                     const score = result.categoryScores[cat];
-                    // Max values for each category to calculate relative percentages:
-                    // transport: 12, food: 8, energy: 10, shopping: 8, waste: 7
-                    const maxScore = cat === 'transport' ? 12 : cat === 'food' ? 8 : cat === 'energy' ? 10 : cat === 'shopping' ? 8 : 7;
-                    const pct = Math.min(100, Math.max(8, (score / maxScore) * 100));
+                    const maxScore = CATEGORY_MAX_SCORES[cat];
+                    const pct = Math.min(100, Math.max(MIN_BAR_PERCENT, (score / maxScore) * 100));
                     
-                    const barColor = cat === 'transport' ? 'var(--secondary)' : cat === 'food' ? '#F59E0B' : cat === 'energy' ? '#EF4444' : cat === 'shopping' ? '#8B5CF6' : '#0284C7';
-                    const lightBg = cat === 'transport' ? 'var(--secondary-light)' : cat === 'food' ? '#FEF3C7' : cat === 'energy' ? '#FEE2E2' : cat === 'shopping' ? '#F5F3FF' : '#E0F2FE';
-
                     return (
-                      <div key={cat} className="category-bar-card" style={{ backgroundColor: lightBg }}>
-                        <span className="category-bar-label" style={{ color: barColor }}>
+                      <div key={cat} className={`category-bar-card category-bar-card--${cat}`}>
+                        <span className="category-bar-label">
                           {renderCategoryIcon(cat)} {cat}
                         </span>
                         <div className="category-bar-outer">
                           <div
                             className="category-bar-fill"
-                            style={{ width: `${pct}%`, backgroundColor: barColor }}
+                            style={{ width: `${pct}%` }}
                           />
                         </div>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                        <span className="category-score-value">
                           {score} pts
                         </span>
                       </div>
@@ -369,31 +391,31 @@ export const App: React.FC = () => {
                   })}
                 </div>
 
-                <p style={{ fontSize: '0.75rem', fontStyle: 'italic', borderTop: '1px solid var(--card-border)', paddingTop: '10px' }}>
+                <p className="disclaimer-text">
                   * Disclaimer: This is an awareness estimate, not official carbon accounting. Real emissions vary by region, energy mix, lifestyle context, and product details.
                 </p>
               </div>
 
               {/* Recommendation Shift card */}
-              <div className="card" style={{ border: '2px solid var(--primary)', backgroundColor: 'var(--primary-light)' }}>
-                <span className="archetype-badge" style={{ backgroundColor: 'var(--primary-hover)' }}>YOUR TIMELINE SHIFT</span>
-                <h3 style={{ margin: '10px 0 6px', color: 'var(--primary-hover)' }}>The Habit Shift</h3>
-                <p style={{ marginBottom: '14px', fontSize: '1rem', color: 'var(--text-main)' }}>
+              <div className="card shift-card">
+                <span className="archetype-badge shift-card-badge">YOUR TIMELINE SHIFT</span>
+                <h3 className="shift-card-title">The Habit Shift</h3>
+                <p className="shift-card-desc">
                   Behavior changes fail when we attempt too much. Change just <strong>one repeating pattern</strong> to bend the timeline:
                 </p>
                 <div className="shift-highlight-box">
                   "{result.recommendedShift}"
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div className="shift-impact-row">
                   <div>
-                    <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)' }}>
+                    <span className="impact-label">
                       IMPACT RECOVERY
                     </span>
-                    <h4 style={{ color: 'var(--primary-hover)' }}>
+                    <h4 className="impact-value">
                       -{Math.round(result.totalCo2e - result.shiftedCo2e)} kg CO₂e / Year
                     </h4>
                   </div>
-                  <button className="btn btn-primary" onClick={handleCommitPledge}>
+                  <button className="btn btn-primary" onClick={handleCommitPledge} aria-label="Commit to your recommended habit shift">
                     Commit to Habit Shift
                   </button>
                 </div>
@@ -401,31 +423,31 @@ export const App: React.FC = () => {
             </div>
 
             {/* Simulated Future Column */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div className="flex-col-gap-24">
               <Timeline result={result} checkInCount={0} />
 
               {/* Future Self Note Module */}
               <div className="card">
                 <h3>Reflection: Note From 2050</h3>
-                <p style={{ marginBottom: '16px' }}>
+                <p className="timeline-desc">
                   Read a message sent back in time from your future self.
                 </p>
                 
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                  <button className="btn btn-outline" style={{ flex: 1, minHeight: '40px' }} onClick={() => handleLoadNote('local')}>
+                <div className="note-buttons">
+                  <button className="btn btn-outline note-btn" onClick={() => handleLoadNote('local')}>
                     Read Note
                   </button>
-                  <button className="btn btn-secondary" style={{ flex: 1, minHeight: '40px' }} onClick={() => handleLoadNote('ai')}>
+                  <button className="btn btn-secondary note-btn" onClick={() => handleLoadNote('ai')}>
                     Personalize with AI
                   </button>
                 </div>
 
                 {showNote && (
-                  <div style={{ marginTop: '12px' }}>
+                  <div className="margin-top-10">
                     {isGeneratingNote ? (
-                      <div className="future-note-box" style={{ textAlign: 'center', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div className="future-note-box note-loading">
                         <div>
-                          <div style={{ fontSize: '2rem', animation: 'svgSpin 2s linear infinite', display: 'inline-block', marginBottom: '8px' }}>⌛</div>
+                          <div className="note-spinner">⌛</div>
                           <p>Opening time portal, synthesizing future note...</p>
                         </div>
                       </div>
@@ -447,10 +469,10 @@ export const App: React.FC = () => {
         <section aria-labelledby="pledge-section-title" className="pledge-panel">
           <h2 id="pledge-section-title" className="sr-only">Your Carbon Pledge</h2>
           <div className="card">
-            <span className="hero-tag" style={{ alignSelf: 'center', marginBottom: '8px' }}>
+            <span className="hero-tag pledge-tag-centered">
               ACTIVE PLEDGE
             </span>
-            <h2 style={{ fontSize: '2rem', marginBottom: '8px' }}>Your Habit Shift Commitment</h2>
+            <h2 className="pledge-title">Your Habit Shift Commitment</h2>
             <p>You committed to changing this repeating pattern to bend the future:</p>
 
             <div className="shift-highlight-box">
@@ -460,7 +482,7 @@ export const App: React.FC = () => {
             {/* Daily Return Check-in tracker */}
             <div className="daily-tracker-card">
               <h3>Daily Check-in Log</h3>
-              <p style={{ fontSize: '0.9rem', marginBottom: '12px' }}>
+              <p className="timeline-desc text-sm">
                 Track your progress. Every check-in plants trees and cleans the sky in your simulated future!
               </p>
 
@@ -475,7 +497,7 @@ export const App: React.FC = () => {
                       aria-label={`Day ${idx + 1} ${isChecked ? 'completed' : 'pending'}`}
                     >
                       <span>Day</span>
-                      <span style={{ fontSize: '0.9rem', marginTop: '-2px' }}>{idx + 1}</span>
+                      <span className="checkin-day-number">{idx + 1}</span>
                     </div>
                   );
                 })}
@@ -483,20 +505,20 @@ export const App: React.FC = () => {
 
               {/* Checkin button */}
               {history.checkInDates.includes(getTodayDateString()) ? (
-                <div style={{ padding: '10px', backgroundColor: 'var(--primary-light)', borderRadius: '8px', color: 'var(--primary-hover)', fontWeight: 600 }}>
+                <div className="pledge-checkin-success" role="alert">
                   ✓ You completed today's shift! Great job. Come back tomorrow to record the next day.
                 </div>
               ) : (
-                <button className="btn btn-primary" onClick={handleCheckIn} style={{ width: '100%', maxWidth: '280px' }}>
+                <button className="btn btn-primary pledge-checkin-btn" onClick={handleCheckIn} aria-label="Record today's habit shift check-in">
                   I stuck to my shift today!
                 </button>
               )}
             </div>
 
             {/* Live City Simulation under shifted pledge */}
-            <div style={{ marginTop: '24px', textAlign: 'left' }}>
-              <h3 style={{ marginBottom: '8px' }}>Your Shifted Future City</h3>
-              <p style={{ marginBottom: '16px' }}>
+            <div className="pledge-city-section">
+              <h3 className="pledge-city-heading">Your Shifted Future City</h3>
+              <p className="pledge-city-desc">
                 Visual simulation of your future in 2050 with {history.checkInDates.length} check-in day(s) recorded:
               </p>
               <SVGWorld
@@ -512,7 +534,7 @@ export const App: React.FC = () => {
               <ShareCard result={result} />
             </div>
 
-            <div style={{ marginTop: '30px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <div className="margin-top-30 flex-row-center-gap-12">
               <button className="btn btn-outline" onClick={() => setScreen('results')}>
                 ← View Analysis Dashboard
               </button>
@@ -524,10 +546,11 @@ export const App: React.FC = () => {
         </section>
       )}
 
+      </main>
       {/* Footer */}
       <footer className="app-footer">
         <p>© 2026 Carbon Time Machine. Built for PromptWars Challenge 3.</p>
-        <p style={{ fontSize: '0.75rem' }}>
+        <p className="footer-sub">
           Fully client-side simulator. Private data stored exclusively in your local browser's storage.
         </p>
       </footer>

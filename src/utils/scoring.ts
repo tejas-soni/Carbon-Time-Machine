@@ -1,5 +1,32 @@
+/**
+ * @fileoverview Carbon footprint scoring engine.
+ * Calculates CO₂e emissions, determines behavioral archetypes,
+ * maps future mood states, and generates habit shift recommendations.
+ */
+
 import { Question, QuizAnswers, ResultData, Archetype, FutureMood, CategoryScores } from '../types';
 
+/** CO₂e threshold boundaries (kg/year) for determining future city mood. */
+const CO2E_THRESHOLDS = {
+  RESTORING_MAX: 1500,
+  BALANCED_MAX: 3500,
+  WARMING_MAX: 6000,
+  STRESSED_MAX: 10000,
+} as const;
+
+/** Minimum total quiz points required to assign a specific archetype. Below this, user is a 'Quiet Saver'. */
+const MIN_ARCHETYPE_POINTS = 10;
+
+/** Maps quiz categories to their corresponding behavioral archetypes. */
+const CATEGORY_TO_ARCHETYPE: Record<string, Archetype> = {
+  transport: 'Convenience Commuter',
+  food: 'Delivery Loop',
+  energy: 'Cooling Dependent Urbanite',
+  shopping: 'High-Street Shopper',
+  waste: 'Packaging Accumulator',
+};
+
+/** Complete set of 12 lifestyle habit questions across 5 impact categories. */
 export const QUESTIONS: Question[] = [
   // Transport
   {
@@ -139,11 +166,16 @@ export const QUESTIONS: Question[] = [
   }
 ];
 
+/**
+ * Determines the future city mood based on annual CO₂e emissions.
+ * @param co2e - Total annual carbon emissions in kg CO₂e.
+ * @returns The projected future mood classification.
+ */
 export function getFutureMood(co2e: number): FutureMood {
-  if (co2e < 1500) return 'Restoring';
-  if (co2e < 3500) return 'Balanced';
-  if (co2e < 6000) return 'Warming';
-  if (co2e < 10000) return 'Stressed';
+  if (co2e < CO2E_THRESHOLDS.RESTORING_MAX) return 'Restoring';
+  if (co2e < CO2E_THRESHOLDS.BALANCED_MAX) return 'Balanced';
+  if (co2e < CO2E_THRESHOLDS.WARMING_MAX) return 'Warming';
+  if (co2e < CO2E_THRESHOLDS.STRESSED_MAX) return 'Stressed';
   return 'Overheated';
 }
 
@@ -152,6 +184,7 @@ export interface RecommendationInfo {
   co2eSaving: number;
 }
 
+/** Maps each behavioral archetype to its recommended habit shift and estimated CO₂e savings. */
 export const ARCHETYPE_RECOMMENDATIONS: Record<Archetype, RecommendationInfo> = {
   'Convenience Commuter': {
     shiftText: 'Replace two short cab/car rides this week with walking, cycling, or public transit.',
@@ -179,6 +212,13 @@ export const ARCHETYPE_RECOMMENDATIONS: Record<Archetype, RecommendationInfo> = 
   }
 };
 
+/**
+ * Processes quiz answers to produce a complete carbon footprint analysis.
+ * Calculates total emissions, determines the behavioral archetype,
+ * projects the future mood, and recommends a single habit shift.
+ * @param answers - Map of question IDs to selected option indices.
+ * @returns Complete result data including emissions, archetype, and recommendations.
+ */
 export function calculateResults(answers: QuizAnswers): ResultData {
   let totalCo2e = 0;
   const categoryScores: CategoryScores = {
@@ -212,15 +252,11 @@ export function calculateResults(answers: QuizAnswers): ResultData {
   // Calculate total points
   const totalPoints = Object.values(categoryScores).reduce((sum, score) => sum + score, 0);
 
-  if (totalPoints >= 10) {
+  if (totalPoints >= MIN_ARCHETYPE_POINTS) {
     categories.forEach((cat) => {
       if (categoryScores[cat] > maxScore) {
         maxScore = categoryScores[cat];
-        if (cat === 'transport') archetype = 'Convenience Commuter';
-        else if (cat === 'food') archetype = 'Delivery Loop';
-        else if (cat === 'energy') archetype = 'Cooling Dependent Urbanite';
-        else if (cat === 'shopping') archetype = 'High-Street Shopper';
-        else if (cat === 'waste') archetype = 'Packaging Accumulator';
+        archetype = CATEGORY_TO_ARCHETYPE[cat] || 'Quiet Saver';
       }
     });
   } else {

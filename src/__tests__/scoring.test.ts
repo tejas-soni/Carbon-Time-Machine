@@ -1,5 +1,9 @@
+/**
+ * @fileoverview Unit tests for the carbon footprint scoring engine.
+ * Validates emissions calculations, archetype assignment, and threshold logic.
+ */
 import { describe, test, expect } from 'vitest';
-import { calculateResults, getFutureMood } from '../utils/scoring';
+import { calculateResults, getFutureMood, ARCHETYPE_RECOMMENDATIONS } from '../utils/scoring';
 import { QuizAnswers } from '../types';
 
 describe('Carbon Scoring Engine Tests', () => {
@@ -49,10 +53,13 @@ describe('Carbon Scoring Engine Tests', () => {
     expect(results.totalCo2e).toBe(16500);
     expect(results.futureMood).toBe('Overheated');
     expect(results.shiftedCo2e).toBe(16500 - 400); // Convenience Commuter (highest points is transport Q1+Q2+Q3 = 12 pts)
-    expect(results.shiftedFutureMood).toBe('Overheated');
+    // The scoring engine automatically steps down the shifted mood to ensure the user sees an improvement
+    expect(results.shiftedFutureMood).toBe('Stressed');
   });
 
   test('correctly maps future moods according to thresholds', () => {
+    expect(getFutureMood(0)).toBe('Restoring');
+    expect(getFutureMood(-100)).toBe('Restoring');
     expect(getFutureMood(500)).toBe('Restoring');
     expect(getFutureMood(1499)).toBe('Restoring');
     expect(getFutureMood(1500)).toBe('Balanced');
@@ -98,5 +105,56 @@ describe('Carbon Scoring Engine Tests', () => {
 
     const wasteResults = calculateResults(wasteAnswers);
     expect(wasteResults.archetype).toBe('Packaging Accumulator');
+  });
+
+  test('handles empty answers gracefully by using option 0 defaults', () => {
+    const emptyAnswers: QuizAnswers = {};
+    const results = calculateResults(emptyAnswers);
+
+    // With all defaults (option 0), total should be 520 kg
+    expect(results.totalCo2e).toBe(520);
+    expect(results.archetype).toBe('Quiet Saver');
+    expect(results.futureMood).toBe('Restoring');
+  });
+
+  test('handles partial answers by defaulting unanswered questions to option 0', () => {
+    const partialAnswers: QuizAnswers = {
+      1: 4, // Car: 2500 kg
+      4: 3, // Daily delivery: 800 kg
+    };
+    const results = calculateResults(partialAnswers);
+
+    // Answered: 2500 + 800 = 3300
+    // Defaults for remaining 10: 0+0+300+0+50+50+50+100+20-100 = 470
+    // Total = 3300 + 470 = 3770
+    expect(results.totalCo2e).toBe(3770);
+    expect(results.futureMood).toBe('Warming');
+  });
+
+  test('shifted future mood is always better than or equal to original mood', () => {
+    const answers: QuizAnswers = {
+      1: 3, 2: 2, 3: 1,
+      4: 2, 5: 2,
+      6: 2, 7: 1, 8: 1,
+      9: 2, 10: 2,
+      11: 2, 12: 2
+    };
+    const results = calculateResults(answers);
+    const moods: string[] = ['Restoring', 'Balanced', 'Warming', 'Stressed', 'Overheated'];
+    const originalIdx = moods.indexOf(results.futureMood);
+    const shiftedIdx = moods.indexOf(results.shiftedFutureMood);
+    expect(shiftedIdx).toBeLessThanOrEqual(originalIdx);
+  });
+
+  test('ARCHETYPE_RECOMMENDATIONS has entries for all archetypes', () => {
+    const archetypes: import('../types').Archetype[] = [
+      'Convenience Commuter', 'Delivery Loop', 'Cooling Dependent Urbanite',
+      'High-Street Shopper', 'Packaging Accumulator', 'Quiet Saver'
+    ];
+    archetypes.forEach((archetype) => {
+      expect(ARCHETYPE_RECOMMENDATIONS[archetype]).toBeDefined();
+      expect(ARCHETYPE_RECOMMENDATIONS[archetype].co2eSaving).toBeGreaterThan(0);
+      expect(ARCHETYPE_RECOMMENDATIONS[archetype].shiftText.length).toBeGreaterThan(10);
+    });
   });
 });
