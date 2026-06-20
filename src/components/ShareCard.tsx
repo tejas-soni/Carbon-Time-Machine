@@ -51,7 +51,7 @@ Try yours: ${APP_LINK}
         document.body.removeChild(el);
         triggerToast('Copy card copied to clipboard!');
       }
-    } catch (err) {
+    } catch (_err) {
       triggerToast('Failed to copy. Please copy manually.');
     }
   };

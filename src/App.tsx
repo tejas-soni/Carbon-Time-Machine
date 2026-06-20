@@ -2,7 +2,11 @@
  * @fileoverview Main application controller and routing component.
  * Manages the state and transitions between the landing, quiz, results, and pledge screens.
  */
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { LandingScreen } from './components/screens/LandingScreen';
+import { QuizScreen } from './components/screens/QuizScreen';
+import { ResultsScreen } from './components/screens/ResultsScreen';
+import { PledgeScreen } from './components/screens/PledgeScreen';
 import { QUESTIONS, calculateResults, ARCHETYPE_RECOMMENDATIONS } from './utils/scoring';
 import {
   loadResultData,
@@ -10,37 +14,14 @@ import {
   loadCheckInHistory,
   createPledge,
   addCheckInToday,
-  clearAllData,
-  getTodayDateString
+  clearAllData
 } from './utils/storage';
 import { log } from './utils/logger';
 import { generateFutureNote } from './utils/templates';
-import { QuizAnswers, ResultData, CheckInHistory, Archetype, QuestionCategory } from './types';
-import Timeline from './components/Timeline';
-import ShareCard from './components/ShareCard';
-import Stepper from './components/Stepper';
-import SVGWorld from './components/SVGWorld';
+import { QuizAnswers, ResultData, CheckInHistory } from './types';
 
 /** Screen state type for routing within the app. */
 type ScreenState = 'landing' | 'quiz' | 'results' | 'pledge';
-
-/** Maps archetypes to their corresponding emoji icon. */
-const ARCHETYPE_ICONS: Record<Archetype, string> = {
-  'Convenience Commuter': '🚗',
-  'Delivery Loop': '🍕',
-  'Cooling Dependent Urbanite': '❄️',
-  'High-Street Shopper': '🛍️',
-  'Packaging Accumulator': '📦',
-  'Quiet Saver': '🌱'
-};
-
-/** Maximum possible points per quiz category for percentage calculations. */
-const CATEGORY_MAX_SCORES: Record<QuestionCategory, number> = {
-  transport: 12, food: 8, energy: 10, shopping: 8, waste: 7,
-};
-
-/** Minimum visible width percentage for category bars. */
-const MIN_BAR_PERCENT = 8;
 
 /** Generates a random timeline verification ID. */
 const generateTimelineId = (): number => Math.floor(Math.random() * 89999 + 10000);
@@ -203,14 +184,7 @@ export const App: React.FC = () => {
     }
   };
 
-  const currentQuestion = QUESTIONS[currentQIndex];
-  const isQuestionAnswered = answers[currentQuestion?.id] !== undefined;
 
-  /** Maps impact categories to their respective emoji icons. */
-  const renderCategoryIcon = (category: string) => {
-    const icons: Record<QuestionCategory | string, string> = { transport: '🚲', food: '🥗', energy: '⚡', shopping: '🛍️', waste: '♻️' };
-    return icons[category] || '📍';
-  };
 
   return (
     <div className="app-container">
@@ -234,316 +208,41 @@ export const App: React.FC = () => {
 
       {/* Landing Page */}
       {screen === 'landing' && (
-        <section className="landing-hero" aria-labelledby="hero-title">
-          <div className="hero-content">
-            <h2 id="hero-title" className="hero-title">
-              See the future your habits are quietly building.
-            </h2>
-            <p className="hero-desc">
-              This is not just a carbon calculator. It is an interactive time portal connecting your daily, repeating habits to the future state of our shared city. Swap a single habit today, and watch the timeline bend.
-            </p>
-            <div className="margin-top-10">
-              <button
-                className="btn btn-primary"
-                onClick={() => setScreen('quiz')}
-                aria-label="Enter the time machine and start lifestyle questionnaire"
-              >
-                Enter the Time Machine →
-              </button>
-            </div>
-          </div>
-
-          <div className="hero-visual">
-            <div className="portal-container">
-              <div className="portal-graphic" />
-              <div className="portal-face">
-                <span className="portal-emoji">🌇</span>
-                <h3 className="portal-heading">Dual Futures Portal</h3>
-                <p className="portal-desc">
-                  Interactive visualization adjusts based on 12 lifestyle habits.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+        <LandingScreen onStartQuiz={() => setScreen('quiz')} />
       )}
 
       {/* Quiz Questionnaire */}
       {screen === 'quiz' && (
-        <section aria-labelledby="quiz-section-title">
-          <h2 id="quiz-section-title" className="sr-only">Questionnaire</h2>
-          <div className="card quiz-card">
-            <Stepper currentStep={currentQIndex + 1} totalSteps={QUESTIONS.length} />
-
-            <div className="quiz-header">
-              <span className={`quiz-category-badge badge-${currentQuestion.category}`}>
-                {renderCategoryIcon(currentQuestion.category)} {currentQuestion.category}
-              </span>
-              <span className="quiz-meta">
-                Q {currentQIndex + 1} of {QUESTIONS.length}
-              </span>
-            </div>
-
-            <h3 className="quiz-question-text">{currentQuestion.text}</h3>
-
-            <div className="quiz-options-list" role="radiogroup" aria-label={currentQuestion.text}>
-              {currentQuestion.options.map((opt, idx) => {
-                const isSelected = answers[currentQuestion.id] === idx;
-                return (
-                  <button
-                    key={idx}
-                    role="radio"
-                    aria-checked={isSelected}
-                    className={`quiz-option-btn ${isSelected ? 'selected' : ''}`}
-                    onClick={() => handleAnswerSelect(idx)}
-                  >
-                    <span>{opt.text}</span>
-                    <span className="option-marker" />
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="quiz-footer">
-              <button
-                className={`btn btn-outline ${currentQIndex === 0 ? 'visibility-hidden' : ''}`}
-                onClick={handleBack}
-                disabled={currentQIndex === 0}
-              >
-                ← Back
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleNext}
-                disabled={!isQuestionAnswered}
-              >
-                {currentQIndex === QUESTIONS.length - 1 ? 'See My Future →' : 'Next Question'}
-              </button>
-            </div>
-          </div>
-        </section>
+        <QuizScreen
+          currentQIndex={currentQIndex}
+          answers={answers}
+          onAnswerSelect={handleAnswerSelect}
+          onNext={handleNext}
+          onBack={handleBack}
+        />
       )}
 
       {/* Results Dashboard */}
       {screen === 'results' && result && (
-        <section aria-labelledby="results-section-title">
-          <h2 id="results-section-title" className="sr-only">Carbon Footprint Results</h2>
-          <div className="results-container">
-            {/* Analysis & Details Column */}
-            <div className="flex-col-gap-24">
-              <div className="card dashboard-card">
-                <div className="archetype-banner">
-                  <div>
-                    <span className="archetype-badge">YOUR BEHAVIOR PATTERN</span>
-                    <h3 className="archetype-title">{result.archetype}</h3>
-                    <p className="archetype-description">
-                      {result.archetype === 'Quiet Saver' 
-                        ? 'Your habits are already very light. You lead by quiet example.' 
-                        : `Your footprint is primarily driven by your repeating ${result.archetype.replace('The ', '')} habits.`}
-                    </p>
-                  </div>
-                  <span className="archetype-icon" aria-hidden="true">
-                    {ARCHETYPE_ICONS[result.archetype] || '🌱'}
-                  </span>
-                </div>
-
-                <div className="footprint-indicator">
-                  <div className={`footprint-circle ${result.futureMood}`}>
-                    <span className="footprint-number">
-                      {Math.round(result.totalCo2e / 100) / 10}
-                    </span>
-                    <span className="footprint-unit">Tons/Yr</span>
-                  </div>
-                  <div>
-                    <h4 className="footprint-title">
-                      Estimated Footprint: {(result.totalCo2e / 1000).toFixed(2)} Tons CO₂e / Year
-                    </h4>
-                    <p className="footprint-desc">
-                      If this pattern continues, your timeline bends toward a <strong>{result.futureMood.toLowerCase()}</strong> future.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Categories Bar Chart */}
-                <h4 className="breakdown-heading">Impact Contribution Breakdown</h4>
-                <div className="analysis-category-grid">
-                  {(['transport', 'food', 'energy', 'shopping', 'waste'] as const).map((cat) => {
-                    const score = result.categoryScores[cat];
-                    const maxScore = CATEGORY_MAX_SCORES[cat];
-                    const pct = Math.min(100, Math.max(MIN_BAR_PERCENT, (score / maxScore) * 100));
-                    
-                    return (
-                      <div key={cat} className={`category-bar-card category-bar-card--${cat}`}>
-                        <span className="category-bar-label">
-                          {renderCategoryIcon(cat)} {cat}
-                        </span>
-                        <div className="category-bar-outer">
-                          <div
-                            className="category-bar-fill"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="category-score-value">
-                          {score} pts
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <p className="disclaimer-text">
-                  * Disclaimer: This is an awareness estimate, not official carbon accounting. Real emissions vary by region, energy mix, lifestyle context, and product details.
-                </p>
-              </div>
-
-              {/* Recommendation Shift card */}
-              <div className="card shift-card">
-                <span className="archetype-badge shift-card-badge">YOUR TIMELINE SHIFT</span>
-                <h3 className="shift-card-title">The Habit Shift</h3>
-                <p className="shift-card-desc">
-                  Behavior changes fail when we attempt too much. Change just <strong>one repeating pattern</strong> to bend the timeline:
-                </p>
-                <div className="shift-highlight-box">
-                  "{result.recommendedShift}"
-                </div>
-                <div className="shift-impact-row">
-                  <div>
-                    <span className="impact-label">
-                      IMPACT RECOVERY
-                    </span>
-                    <h4 className="impact-value">
-                      -{Math.round(result.totalCo2e - result.shiftedCo2e)} kg CO₂e / Year
-                    </h4>
-                  </div>
-                  <button className="btn btn-primary" onClick={handleCommitPledge} aria-label="Commit to your recommended habit shift">
-                    Commit to Habit Shift
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Simulated Future Column */}
-            <div className="flex-col-gap-24">
-              <Timeline result={result} checkInCount={0} />
-
-              {/* Future Self Note Module */}
-              <div className="card">
-                <h3>Reflection: Note From 2050</h3>
-                <p className="timeline-desc">
-                  Read a message sent back in time from your future self.
-                </p>
-                
-                <div className="note-buttons">
-                  <button className="btn btn-outline note-btn" onClick={() => handleLoadNote('local')}>
-                    Read Note
-                  </button>
-                  <button className="btn btn-secondary note-btn" onClick={() => handleLoadNote('ai')}>
-                    Personalize with AI
-                  </button>
-                </div>
-
-                {showNote && (
-                  <div className="margin-top-10">
-                    {isGeneratingNote ? (
-                      <div className="future-note-box note-loading">
-                        <div>
-                          <div className="note-spinner">⌛</div>
-                          <p>Opening time portal, synthesizing future note...</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="future-note-box">
-                        {noteContent}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
+        <ResultsScreen
+          result={result}
+          onCommitPledge={handleCommitPledge}
+          showNote={showNote}
+          isGeneratingNote={isGeneratingNote}
+          noteContent={noteContent}
+          onLoadNote={handleLoadNote}
+        />
       )}
 
       {/* Pledge & Daily Return Tracker Screen */}
       {screen === 'pledge' && result && history && (
-        <section aria-labelledby="pledge-section-title" className="pledge-panel">
-          <h2 id="pledge-section-title" className="sr-only">Your Carbon Pledge</h2>
-          <div className="card">
-            <span className="hero-tag pledge-tag-centered">
-              ACTIVE PLEDGE
-            </span>
-            <h2 className="pledge-title">Your Habit Shift Commitment</h2>
-            <p>You committed to changing this repeating pattern to bend the future:</p>
-
-            <div className="shift-highlight-box">
-              "{history.pledge.shiftText}"
-            </div>
-
-            {/* Daily Return Check-in tracker */}
-            <div className="daily-tracker-card">
-              <h3>Daily Check-in Log</h3>
-              <p className="timeline-desc text-sm">
-                Track your progress. Every check-in plants trees and cleans the sky in your simulated future!
-              </p>
-
-              {/* 7-Day progress chain */}
-              <div className="checkin-row" role="group" aria-label="7 Day Progress tracking">
-                {Array.from({ length: 7 }).map((_, idx) => {
-                  const isChecked = idx < history.checkInDates.length;
-                  return (
-                    <div
-                      key={idx}
-                      className={`checkin-day-bubble ${isChecked ? 'checked' : ''}`}
-                      aria-label={`Day ${idx + 1} ${isChecked ? 'completed' : 'pending'}`}
-                    >
-                      <span>Day</span>
-                      <span className="checkin-day-number">{idx + 1}</span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Checkin button */}
-              {history.checkInDates.includes(getTodayDateString()) ? (
-                <div className="pledge-checkin-success" role="alert">
-                  ✓ You completed today's shift! Great job. Come back tomorrow to record the next day.
-                </div>
-              ) : (
-                <button className="btn btn-primary pledge-checkin-btn" onClick={handleCheckIn} aria-label="Record today's habit shift check-in">
-                  I stuck to my shift today!
-                </button>
-              )}
-            </div>
-
-            {/* Live City Simulation under shifted pledge */}
-            <div className="pledge-city-section">
-              <h3 className="pledge-city-heading">Your Shifted Future City</h3>
-              <p className="pledge-city-desc">
-                Visual simulation of your future in 2050 with {history.checkInDates.length} check-in day(s) recorded:
-              </p>
-              <SVGWorld
-                mood={result.futureMood}
-                timeline="B"
-                year={2050}
-                checkInCount={history.checkInDates.length}
-              />
-            </div>
-
-            {/* Share Card & Action options */}
-            <div className="share-section">
-              <ShareCard result={result} />
-            </div>
-
-            <div className="margin-top-30 flex-row-center-gap-12">
-              <button className="btn btn-outline" onClick={() => setScreen('results')}>
-                ← View Analysis Dashboard
-              </button>
-              <button className="btn btn-danger" onClick={handleReset}>
-                Reset & Restart Quiz
-              </button>
-            </div>
-          </div>
-        </section>
+        <PledgeScreen
+          result={result}
+          history={history}
+          onCheckIn={handleCheckIn}
+          onReset={handleReset}
+          onViewDashboard={() => setScreen('results')}
+        />
       )}
 
       </main>
